@@ -46,7 +46,7 @@ Returns JSON with:
 - `end_time` - end timestamp (microseconds)
 - `total_time_ms` - total analysis time in milliseconds
 - `time_complexity` - Big O notation
-- `path_to_graph` - base64 encoded PNG graph image
+- `path_to_graph` - clickable URL to download the graph image
 
 Example response:
 ```json
@@ -58,6 +58,10 @@ Example response:
   "end_time": 239759234,
   "total_time_ms": 3.45,
   "time_complexity": "O(n²)",
-  "path_to_graph": "iVBORw0KGgoAAAANSUhEUgAA..."
+  "path_to_graph": "/download/abc123def456..."
 }
 ```
+
+## Download Graph
+
+The `path_to_graph` field contains a clickable URL. Clicking it or visiting it in a browser will automatically download the graph image as a PNG file.

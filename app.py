@@ -1,13 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import time
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
-import base64
 import numpy as np
+import hashlib
 
 app = Flask(__name__)
+image_cache = {}
 
 def bubble_sort(arr):
     n = len(arr)
@@ -41,7 +42,7 @@ def nested_exponential(n):
             result += 1
     return result
 
-def analyze_algorithm(algo_name, n, steps):
+def analyze_algorithm(algo_name, n, steps, base_url):
     algorithms = {
         'bubble': lambda size: bubble_sort(list(range(size, 0, -1))),
         'linear': lambda size: linear_search(list(range(size)), size - 1),
@@ -96,8 +97,14 @@ def analyze_algorithm(algo_name, n, steps):
     img_buffer = io.BytesIO()
     plt.savefig(img_buffer, format='png', dpi=100, bbox_inches='tight')
     img_buffer.seek(0)
-    graph_base64 = base64.b64encode(img_buffer.read()).decode('utf-8')
+    img_data = img_buffer.getvalue()
+    
+    image_id = hashlib.md5(f"{algo_name}_{n}_{steps}_{start_time}".encode()).hexdigest()
+    image_cache[image_id] = img_data
+    
     plt.close()
+    
+    download_url = f"{base_url}/download/{image_id}"
     
     return {
         'algo': algo_name,
@@ -107,7 +114,7 @@ def analyze_algorithm(algo_name, n, steps):
         'end_time': int(end_time * 1000000),
         'total_time_ms': round(total_time_ms, 2),
         'time_complexity': time_complexity,
-        'path_to_graph': graph_base64
+        'path_to_graph': download_url
     }
 
 @app.route('/analyze', methods=['GET'])
@@ -126,11 +133,28 @@ def analyze():
     if n <= 0 or steps <= 0:
         return jsonify({'error': 'Parameters n and steps must be positive integers'}), 400
     
-    result = analyze_algorithm(algo, n, steps)
+    base_url = request.url_root.rstrip('/')
+    result = analyze_algorithm(algo, n, steps, base_url)
     if result is None:
         return jsonify({'error': f'Unknown algorithm: {algo}'}), 400
     
     return jsonify(result)
+
+@app.route('/download/<image_id>', methods=['GET'])
+def download_image(image_id):
+    if image_id not in image_cache:
+        return jsonify({'error': 'Image not found'}), 404
+    
+    img_data = image_cache[image_id]
+    img_buffer = io.BytesIO(img_data)
+    img_buffer.seek(0)
+    
+    return send_file(
+        img_buffer,
+        mimetype='image/png',
+        as_attachment=True,
+        download_name=f'complexity_graph_{image_id}.png'
+    )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=3000, debug=True)
