@@ -44,12 +44,8 @@ def nested_exponential(n):
 def analyze_algorithm(algo_name, n, steps):
     algorithms = {
         'bubble': lambda size: bubble_sort(list(range(size, 0, -1))),
-        'bubblesort': lambda size: bubble_sort(list(range(size, 0, -1))),
         'linear': lambda size: linear_search(list(range(size)), size - 1),
-        'linear search': lambda size: linear_search(list(range(size)), size - 1),
         'binary': lambda size: binary_search(list(range(size)), size - 1),
-        'nested': lambda size: nested_exponential(size),
-        'exponential': lambda size: nested_exponential(size),
         'nested/exponential': lambda size: nested_exponential(size)
     }
     

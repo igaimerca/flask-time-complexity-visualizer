@@ -31,10 +31,10 @@ http://localhost:3000/analyze?algo=bubble&n=1000&steps=10
 
 ## Supported Algorithms
 
-- `bubble` or `bubblesort` - O(n²)
-- `linear` or `linear search` - O(n)
+- `bubble` - O(n²)
+- `linear` - O(n)
 - `binary` - O(log n)
-- `nested`, `exponential`, or `nested/exponential` - O(2^n)
+- `nested/exponential` - O(2^n)
 
 ## Response Format
 
