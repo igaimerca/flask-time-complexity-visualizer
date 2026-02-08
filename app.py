@@ -1,14 +1,35 @@
 from flask import Flask, request, jsonify, send_file
 import time
+import os
+import io
+import hashlib
+import requests
+from dotenv import load_dotenv
+
+load_dotenv()
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-import io
 import numpy as np
-import hashlib
 
 app = Flask(__name__)
 image_cache = {}
+analysis_cache = {}
+
+CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME', 'igaime')
+CLOUDINARY_UPLOAD_PRESET = os.environ.get('CLOUDINARY_UPLOAD_PRESET', 'ljpslqnr')
+
+def upload_to_cloudinary(img_data, public_id_prefix='complexity_graph'):
+    url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD_NAME}/upload"
+    files = {'file': (f'{public_id_prefix}.png', img_data, 'image/png')}
+    data = {'upload_preset': CLOUDINARY_UPLOAD_PRESET}
+    try:
+        r = requests.post(url, files=files, data=data, timeout=30)
+        if r.status_code == 200:
+            return r.json().get('secure_url')
+    except Exception:
+        pass
+    return None
 
 def bubble_sort(arr):
     n = len(arr)
@@ -104,9 +125,11 @@ def analyze_algorithm(algo_name, n, steps, base_url):
     
     plt.close()
     
-    download_url = f"{base_url}/download/{image_id}"
+    cloud_url = upload_to_cloudinary(img_data, public_id_prefix=f'complexity_graph_{image_id}')
+    path_to_graph = cloud_url if cloud_url else f"{base_url}/download/{image_id}"
     
-    return {
+    result = {
+        'analysis_id': image_id,
         'algo': algo_name,
         'items': n,
         'steps': steps,
@@ -114,8 +137,10 @@ def analyze_algorithm(algo_name, n, steps, base_url):
         'end_time': int(end_time * 1000000),
         'total_time_ms': round(total_time_ms, 2),
         'time_complexity': time_complexity,
-        'path_to_graph': download_url
+        'path_to_graph': path_to_graph
     }
+    analysis_cache[image_id] = result
+    return result
 
 @app.route('/analyze', methods=['GET'])
 def analyze():
@@ -139,6 +164,15 @@ def analyze():
         return jsonify({'error': f'Unknown algorithm: {algo}'}), 400
     
     return jsonify(result)
+
+@app.route('/retrieve_analysis', methods=['GET'])
+def retrieve_analysis():
+    analysis_id = request.args.get('analysis_id')
+    if not analysis_id:
+        return jsonify({'error': 'Missing required parameter: analysis_id'}), 400
+    if analysis_id not in analysis_cache:
+        return jsonify({'error': 'Analysis not found'}), 404
+    return jsonify(analysis_cache[analysis_id])
 
 @app.route('/download/<image_id>', methods=['GET'])
 def download_image(image_id):
